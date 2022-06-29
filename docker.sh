@@ -88,6 +88,7 @@ wp_docker_build() {
   if [ -n "${cache}" ]
   then
     cache="${registry}/${name}:develop-latest"
+    wp_message INFO "attempt to fetch image ${cache}"
     ${DOCKER} pull "${cache}"
 
     if [ "$?" -eq 0 ]
