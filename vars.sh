@@ -6,6 +6,13 @@ export PATH=${PATH}:/${HOME}/.local/bin
 # DOCKER_REGISTRY=
 
 DOCKER=$(which docker)
+
+if [ -z "${DOCKER}" ]
+then
+  wp_message ERROR "No docker binary found"
+  return 1
+fi
+
 COMPOSE=$(which docker-compose)
 
 AWS=$(which aws)
