@@ -221,7 +221,7 @@ wp_docker_push() {
     ${DOCKER} push ${remote}
   done
 
-  message INFO "push done"
+  wp_message INFO "push done"
 
   return $?
 }
