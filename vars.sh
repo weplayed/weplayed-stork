@@ -6,6 +6,7 @@ export PATH=${PATH}:/${HOME}/.local/bin
 # DOCKER_REGISTRY=
 
 DOCKER=$(which docker)
+COMPOSE=$(which docker-compose)
 
 AWS=$(which aws)
 [ -z "$AWS" ] && pip install awscli && AWS=$(which aws)

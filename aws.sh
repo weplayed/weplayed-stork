@@ -1,5 +1,5 @@
 wp_ecs_deploy() {
-  temp=$(getopt -o 'fc:s:' --long 'force,cluster:,service:' -- "$@")
+  temp=$(getopt -o 'fb:c:s:' --long 'force,branch:,cluster:,service:' -- "$@")
 
   eval set -- "$temp"
   unset temp
@@ -7,12 +7,19 @@ wp_ecs_deploy() {
   cluster="testcluster"
   service=
   force=
+  branch=develop
 
   while true; do
     case "$1" in
       '-f'|'--force')
         force=yes
         shift
+        continue
+      ;;
+
+      '-b'|'--branch')
+        branch=${2}
+        shift 2
         continue
       ;;
 
@@ -52,7 +59,11 @@ wp_ecs_deploy() {
 	  return 0
   fi
 
-  if [[ "${TRAVIS_TAG}" != *"docker-build"* ]] && [[ " ${BRANCHES} " != *" ${branch} "* ]] && [ -z "${force}" ]
+  if [ -n "${branch}" ] && [ "${TRAVIS_BRANCH}" != "${branch}" ]
+  then
+    wp_message INFO "skip because of branch condition"
+    return 0
+  elif [[ "${TRAVIS_TAG}" != *"docker-build"* ]] && [[ " ${BRANCHES} " != *" ${branch} "* ]] && [ -z "${force}" ]
   then
     wp_message WARNING "deploy skipped because of branch conditions"
     return 0
