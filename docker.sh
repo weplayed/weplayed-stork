@@ -229,20 +229,37 @@ wp_docker_push() {
 wp_docker_run() {
   name=${DOCKER_PREFIX}
   branch=${TRAVIS_BRANCH}
+  volume=${VOLUME_MOUNT}
 
-  temp=$(getopt -o 'n:' --long 'name:' -- "$@")
+  mount=
+  vars=
+
+  if [ -n "${VOLUME_MOUNT}" ]
+  then
+    mount=" -v $(pwd):${VOLUME_MOUNT}"
+  fi
+
+  temp=$(getopt -o 'n:m:e:' --long 'name:mount:env:' -- "$@")
 
   eval set -- "$temp"
   unset temp
-
-  force=
-  target=
-  cache=
 
   while true; do
     case "$1" in
       '-n'|'--name')
         name=${2}
+        shift 2
+        continue
+      ;;
+
+      '-m'|'--mount')
+        mount="${mount} -v ${2}"
+        shift 2
+        continue
+      ;;
+
+      '-e'|'--env')
+        vars="${vars} -e ${2}"
         shift 2
         continue
       ;;
@@ -265,7 +282,7 @@ wp_docker_run() {
     return 1
   fi
 
-  ${DOCKER} run "${name}" $@
+  ${DOCKER} run --rm ${mount} ${vars} -t ${name} $@
 
   return $?
 }
