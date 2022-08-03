@@ -1,36 +1,32 @@
 wp_docker_login() {
+  cmd=${AWS}
+
   if [ -n "${AWS_PROFILE}" ]
   then
-    eval $(${AWS} --profile ${AWS_PROFILE} ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
-  else
-    eval $(${AWS} ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
+    cmd="${cmd} --profile ${AWS_PROFILE}"
   fi
+
+  cmd="${cmd} ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION}"
+  wp_execute ${cmd}
 }
 
 wp_docker_build() {
-  name=${DOCKER_PREFIX}
-  registry=${DOCKER_REGISTRY}
-  branch=${TRAVIS_BRANCH}
+  local name=${DOCKER_PREFIX}
+  local registry=${DOCKER_REGISTRY}
 
-  temp=$(getopt -o 'cb:r:n:t:' --long 'cache,branch:,registry:,name:,target:' -- "$@")
+  local temp=$(getopt -o 'cr:n:t:' --long 'cache,registry:,name:,target:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  target=
-  cache=
+  local target=
+  local cache=
 
   while true; do
     case "$1" in
       '-c'|'--cache')
         cache=yes
         shift
-        continue
-      ;;
-
-      '-b'|'--branch')
-        branch=${2}
-        shift 2
         continue
       ;;
 
@@ -76,20 +72,13 @@ wp_docker_build() {
     return 1
   fi
 
-  if [ -z "${branch}" ]
-  then
-    # always use develop if target branch not in the list
-    wp_message ERROR "no \$TRAVIS_BRANCH neither --branch passed"
-    return 1
-  fi
-
-  cmd="${DOCKER} build -t ${name}"
+  local cmd="${DOCKER} build -t ${name}"
 
   if [ -n "${cache}" ]
   then
     cache="${registry}/${name}:develop-latest"
     wp_message INFO "attempt to fetch image ${cache}"
-    ${DOCKER} pull "${cache}"
+    wp_execute "${DOCKER} pull ${cache}"
 
     if [ "$?" -eq 0 ]
     then
@@ -109,7 +98,7 @@ wp_docker_build() {
   fi
 
   cmd="${cmd} ."
-  ${cmd}
+  wp_execute ${cmd}
 
   if [ $? -eq 0 ]
   then
@@ -122,18 +111,18 @@ wp_docker_build() {
 }
 
 wp_docker_push() {
-  name=${DOCKER_PREFIX}
-  registry=${DOCKER_REGISTRY}
-  branch=${TRAVIS_BRANCH}
+  local name=${DOCKER_PREFIX}
+  local registry=${DOCKER_REGISTRY}
+  local branch=${TRAVIS_BRANCH}
 
-  temp=$(getopt -o 'fb:r:n:' --long 'force,branch:,registry:,name:' -- "$@")
+  local temp=$(getopt -o 'fb:r:n:' --long 'force,branch:,registry:,name:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  force=
-  target=
-  cache=
+  local force=
+  local target=
+  local cache=
 
   while true; do
     case "$1" in
@@ -204,7 +193,7 @@ wp_docker_push() {
     return 0
   fi
 
-  tags="latest travis-${TRAVIS_BUILD_NUMBER}"
+  local tags="latest travis-${TRAVIS_BUILD_NUMBER}"
 
   if [[ " ${BRANCHES} " = *" ${branch} "*  ]]
   then
@@ -217,8 +206,8 @@ wp_docker_push() {
   do
     wp_message INFO "tagging ${tag}"
     remote=${registry}/${name}:${tag}
-    ${DOCKER} tag ${name}:latest ${remote}
-    ${DOCKER} push ${remote}
+    wp_execute ${DOCKER} tag ${name}:latest ${remote}
+    wp_execute ${DOCKER} push ${remote}
   done
 
   wp_message INFO "push done"
@@ -227,19 +216,13 @@ wp_docker_push() {
 }
 
 wp_docker_run() {
-  name=${DOCKER_PREFIX}
-  branch=${TRAVIS_BRANCH}
-  volume=${VOLUME_MOUNT}
+  local name=${DOCKER_PREFIX}
+  local volume=${VOLUME_MOUNT}
 
-  mount=
-  vars=
+  local mount=
+  local vars=
 
-  if [ -n "${VOLUME_MOUNT}" ]
-  then
-    mount=" -v $(pwd):${VOLUME_MOUNT}"
-  fi
-
-  temp=$(getopt -o 'n:m:e:' --long 'name:mount:env:' -- "$@")
+  local temp=$(getopt -o 'n:m:e:v:' --long 'name:mount:env:volume:' -- "$@")
 
   eval set -- "$temp"
   unset temp
@@ -247,7 +230,7 @@ wp_docker_run() {
   while true; do
     case "$1" in
       '-n'|'--name')
-        name=${2}
+        name="${2}"
         shift 2
         continue
       ;;
@@ -260,6 +243,12 @@ wp_docker_run() {
 
       '-e'|'--env')
         vars="${vars} -e ${2}"
+        shift 2
+        continue
+      ;;
+
+      '-v'|'--volume')
+        volume="${2}"
         shift 2
         continue
       ;;
@@ -282,7 +271,12 @@ wp_docker_run() {
     return 1
   fi
 
-  ${DOCKER} run --rm ${mount} ${vars} -t ${name} $@
+  if [ -n "${volume}" ]
+  then
+    mount="${mount} -v $(pwd):${volume}"
+  fi
+
+  wp_execute ${DOCKER} run --rm ${mount} ${vars} -t ${name} $@
 
   return $?
 }

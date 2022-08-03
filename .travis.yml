@@ -1,0 +1,8 @@
+dist: focal
+
+install:
+  - sudo apt update
+  - sudo apt install -y bats
+
+script:
+  - bats tests

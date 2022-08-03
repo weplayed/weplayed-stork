@@ -1,13 +1,13 @@
 wp_ecs_deploy() {
-  temp=$(getopt -o 'fb:c:s:' --long 'force,branch:,cluster:,service:' -- "$@")
+  local temp=$(getopt -o 'fb:c:s:' --long 'force,branch:,cluster:,service:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  cluster="testcluster"
-  service=
-  force=
-  branch=develop
+  local cluster="testcluster"
+  local service=
+  local force=
+  local branch="${TRAVIS_BRANCH}"
 
   while true; do
     case "$1" in
@@ -71,7 +71,7 @@ wp_ecs_deploy() {
 
   wp_message INFO "deploy ${service} to ${cluster}"
 
-  aws ecs update-service \
+  wp_execute aws ecs update-service \
     --service "${service}" \
     --cluster "${cluster}" \
     --force-new-deployment \
@@ -86,18 +86,18 @@ wp_s3_deploy() {
     return 0
   fi
 
-  temp=$(getopt -o 'pt:b:l:s:d:' --long 'public,tag:,branch:,live:,staging:,demo:' -- "$@")
+  local temp=$(getopt -o 'pt:b:l:s:d:' --long 'public,tag:,branch:,live:,staging:,demo:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  tag="${TRAVIS_TAG}"
-  branch="${TRAVIS_BRANCH}"
+  local tag="${TRAVIS_TAG}"
+  local branch="${TRAVIS_BRANCH}"
 
-  public=
-  live=
-  staging=
-  demo=
+  local public=
+  local live=
+  local staging=
+  local demo=
 
   while true; do
     case "$1" in
@@ -152,11 +152,11 @@ wp_s3_deploy() {
   if [ -z "${branch}" ] && [ -z "${tag}" ]
   then
     # always use develop if target branch not in the list
-    wp_message ERROR "no '\$TRAVIS_BRANCH', '\$TRAVIS_TAG', '--branch' neither '--tag' passed"
+    wp_message ERROR "no '--branch' neither '--tag' passed"
     return 1
   fi
 
-  src="${1}"
+  local src="${1}"
 
   if [ -z "${src}" ]
   then
@@ -164,26 +164,17 @@ wp_s3_deploy() {
     return 1
   fi
 
-  dest=
+  local dest=
 
-  if [ -n "${live}" ] && [ -n "${tag}" ]
+  if [ -n "$(wp_is_tag_build -t "${tag}")" ]
   then
-    if [[ "${tag}" =~ ^v[0-9]+(\.[0-9]+)*$ ]]
-    then
-      dest="${live}"
-    else
-      wp_message INFO "skipped because of tag conditions"
-      return 0
-    fi
-  elif [ "${branch}" = "develop" ] && [ -n "${staging}" ]
+    dest="${live}"
+  elif [ -n "$(wp_is_staging_build -t "${tag}" -b "${branch}")" ]
   then
     dest="${staging}"
-  elif [ -n "${demo}" ]
+  elif [ -n "$(wp_is_demo_build -t "${tag}" -b "${branch}")" ]
   then
-    if [[ "${branch}" = feature/* ]] || [[ "${branch}" = hotfix/* ]] || [[ "${branch}" = bugifx/* ]]
-    then
-      dest="${demo}"
-    fi
+    dest="${demo}"
   fi
 
   if [ -n "${dest}" ]
@@ -208,7 +199,7 @@ wp_s3_deploy() {
         return 1
       fi
 
-      tagmajor=$(echo ${tag} | sed -e 's|^\([^.]\{1,\}\).*$|\1|')
+      local tagmajor=$(echo ${tag} | sed -e 's|^\([^.]\{1,\}\).*$|\1|')
       dest=${dest//:tagmajor:/$tagmajor}
     fi
 
@@ -237,7 +228,7 @@ wp_s3_deploy() {
         a[1]="/${a[1]}"
       fi
 
-      command="aws"
+      local command="${AWS}"
 
       if [ -n "${AWS_DEFAULT_REGION}" ]
       then
@@ -246,9 +237,9 @@ wp_s3_deploy() {
 
       command="${command} s3 cp ${public} --recursive ${a[0]:-.} ${dest}${a[1]}"
 
-      eval $command
+      wp_execute $command
     done
   else
-    wp_message INFO "skipped because of branch conditions"
+    wp_message INFO "skipped because of tag/branch conditions"
   fi
 }

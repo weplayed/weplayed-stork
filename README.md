@@ -6,6 +6,79 @@ Delivering babies every day.
 
 ## Available functions
 
+### wp_message
+
+Render message into console, heavily used inside other functions. Accepts only positional
+arguments.
+
+Arguments are:
+
+  * [0]: `INFO`, `WARNING` or `ERROR` - message level.
+
+  * [@]: message body
+
+### wp_execute
+
+Used internally to run given command. If `DEBUG` env is set to anything except empty string, given
+command will be echoed to STDOUT.
+
+### wp_is_tag_build
+
+Returns build tag if it matches to predefined tag format. Matching tag names examples:
+
+  * v1
+
+  * v0-anything-you-want
+
+  * v1.12
+
+  * v0.12-anything-you-want
+
+  * v0.12.23-anything-you-want
+
+Arguments:
+
+  * `-t|--tag`: Pass tag name, defaults to `TRAVIS_TAG` environment variable value.
+
+### wp_is_staging_build
+
+Returns branch name if the build considered as staging.
+
+Arguments:
+
+  * `-t|--tag`: Pass tag name, defaults to `TRAVIS_TAG` environment variable value.
+
+  * `-b|--branch`: Specify branch value, defaults to `TRAVIS_BRANCH` environment variable value.
+
+### wp_is_demo_build
+
+Returns current branch name if it matches git flow branch names like `feature/*`, `hotfix/*` or
+`bugfix/*`
+
+Arguments:
+
+  * `-t|--tag`: Pass tag name, defaults to `TRAVIS_TAG` environment variable value.
+
+  * `-b|--branch`: Specify branch value, defaults to `TRAVIS_BRANCH` environment variable value.
+
+### wp_set_weplayed_env
+
+Sets `WEPLAYED_ENV` environment variable according to provided arguments and/or environment
+variables. It uses `wp_is_tag_build`, `wp_is_staging_build` and `wp_is_demo_build` internally
+so all limitations explained in that functions also apply.
+
+Arguments:
+
+  * `-t|--tag`: Tag name. Defaults to `TRAVIS_TAG` env value.
+
+  * `-b|--branch`: branch value, defaults to `TRAVIS_BRANCH` env value.
+
+  * `-l|--live`: Specify env value for tag build.
+
+  * `-s|--staging`: Environment variable value for staging build.
+
+  * `-d|--demo`: .
+
 ### wp_s3_deploy
 
 This function could be used for uploading files to AWS s3 under misc conditions.
@@ -23,7 +96,10 @@ uploaded into some other remote folder, use `,remote/folder` syntax.
 
 *NOTE:* upload won't happen if the `TRAVIS_EVENT_TYPE` env is equals to `pull_request`.
 
-Options:
+See `wp_is_tag_build`, `wp_is_staging_build` and `wp_is_demo_build` for explanation when
+build considered as live, staging or demo.
+
+Arguments:
 
   * `-p|--public`: Set `public-read` ACL during upload
 
@@ -33,14 +109,11 @@ Options:
   * `-b|--branch`: Specify branch value, defaults to `TRAVIS_BRANCH` environment variable value.
 
   * `-l|--live`: Specify AWS s3 destination for tag build.
-    *NOTE*: live (tag) deploy requires tag value to be in predefined format like `v1`, `v2.28` etc,
-    otherwise deploy will be skipped.
 
-  * `-s|--staging`: Specify AWS s3 destination for staging builds - branch equals to `develop`
-    value
+  * `-s|--staging`: Specify AWS s3 destination for staging build.
 
-  * `-d|--demo`: Specify AWS s3 destination for git flow builds, i.e. branch has on of
-    `feature/`, `hotfix/` or `bugfix/` prefixes, really useful with branch placeholder.
+  * `-d|--demo`: Specify AWS s3 destination for git flow builds, really useful with branch
+    placeholder.
 
 Destination path placeholders:
 
