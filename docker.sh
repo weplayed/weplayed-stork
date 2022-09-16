@@ -7,7 +7,8 @@ wp_docker_login() {
   fi
 
   cmd="${cmd} ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION}"
-  wp_execute ${cmd}
+  eval wp_execute ${cmd}
+  return $?
 }
 
 wp_docker_build() {
