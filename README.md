@@ -147,3 +147,40 @@ Under different combination of environment variables upload will happen to diffe
   * `TRAVIS_BRANCH=feature/stork`
     * dist -> s3://demo/feature/stork
     * docs -> s3://demo/feature/stork/docs
+
+### wp_npm_prepare
+
+Prepares NPM deploy into s3 bucket.
+
+Please note, NPM scripts work only with live deployments, so `$TRAVIS_TAG` is necessary during
+execution.
+
+Arguments:
+
+  * `-t|--tag`: Use given tag instead of provided by `$TRAVIS_TAG`
+
+### wp_npm_deploy
+
+This command uses `wp_s3_deploy` under the hood with only `-l` argument provided (only live
+deployment)
+
+This command uploads single file in format `$name-$version.tgz` into remote destination
+under following structure: `$target/$name/$name-$version.tgz`
+
+Arguments:
+
+  * `-f|--folder`: Folder where compiled NPM package resides.
+
+  * `-t|--target`: S3 bucket with optional path to NPM storage
+
+#### Example:
+
+Upload package from `out` folder (given `package.json` specifies `name` as `weplayed-data`
+and `version` as `1.0.1`):
+
+    wp_npm_prepare -t v1.0.1 # explicitly set, can also be inherited from $TRAVIS_TAG env variable
+    wp_npm_deploy -f out -t s3://weplayed-npm-packages
+
+After invocation package will be available under
+`s3://weplayed-npm-packages/weplayed-data/weplayed-data-1.0.1.tgz` location
+
