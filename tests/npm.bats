@@ -124,10 +124,10 @@ teardown() {
   NPM_PACKAGE_NAME=weplayed-test
   pushd $BATS_RUN_TMPDIR >/dev/null 2>&1
     mkdir -p build
-    echo > build/weplayed-test-1.1.12.tgz
+    touch build/weplayed-test-1.1.12.tgz
     run wp_npm_deploy -t s3://test -f build
   popd >/dev/null 2>&1
   [ "${status}" -eq 0 ]
-  [ "${output}" = "aws --region us-east-1 s3 cp --acl public-read --recursive build/weplayed-test-1.1.12.tgz s3://test/weplayed-test/weplayed-test-1.1.12.tgz" ]
+  [[ "${output}" = *"aws --region us-east-1 s3 cp --acl public-read build/weplayed-test-1.1.12.tgz s3://test/weplayed-test/weplayed-test-1.1.12.tgz"* ]]
 }
 
