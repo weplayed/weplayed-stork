@@ -235,7 +235,15 @@ wp_s3_deploy() {
         command="${command} --region ${AWS_DEFAULT_REGION}"
       fi
 
-      command="${command} s3 cp ${public} --recursive ${a[0]:-.} ${dest}${a[1]}"
+      local from="${a[0]:-.}"
+      local to="${dest}${a[1]}"
+      local recursive=""
+
+      if [ -d "${from}" ]; then
+        recursive="--recursive"
+      fi
+
+      command="${command} s3 cp ${public} ${recursive} ${a[0]:-.} ${dest}${a[1]}"
 
       wp_execute $command
     done
