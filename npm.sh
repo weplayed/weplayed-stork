@@ -45,25 +45,16 @@ wp_npm_prepare() {
     return 1
   fi
 
-  local test=$(echo '{"test":"passed"}' | jq .test)
+  NPM_PACKAGE_NAME=$(cat $file | $JQ -r .name)
 
-  if [ $? -ne 0 ] || [ "x${test}" != xpassed ]; then
-    jq_source='https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64'
-    jq='/usr/bin/jq'
-    curl -qL -o "$jq" "$jq_source"
-    chmod 755 "$jq"
-  fi
-
-  NPM_PACKAGE_NAME=$(cat $file | $jq -r .name)
-
-  if [ -z "x$NPM_PACKAGE_NAME" ]; then
+  if [ -z "$NPM_PACKAGE_NAME" ]; then
     wp_message ERROR "$file does not contain name property or set to empty string"
     return 1
   fi
 
-  NPM_PACKAGE_VERSION=$(cat $file | $jq -r .version)
+  NPM_PACKAGE_VERSION=$(cat $file | $JQ -r .version)
 
-  if [ -z "x$NPM_PACKAGE_VERSION" ]; then
+  if [ -z "$NPM_PACKAGE_VERSION" ]; then
     wp_message ERROR "$file does not contain version property or set to empty string"
     return 1
   fi
@@ -79,8 +70,8 @@ wp_npm_prepare() {
 
 wp_npm_deploy() {
   wp_npm_test
-  [ $? -ne 0 ] && return $?
-
+  ret=$?
+  [ $ret -ne 0 ] && return $ret
 
   local temp=$(getopt -o 'f:t:' --long 'folder:,target:' -- "$@")
 
@@ -122,5 +113,11 @@ wp_npm_deploy() {
   fi
 
   local fname="${NPM_PACKAGE_NAME}-${NPM_PACKAGE_VERSION}.tgz"
+
+  if [ ! -f "${folder}/${fname}" ]; then
+    wp_message ERROR "The file ${folder}/${fname} does not exist"
+    return 1
+  fi
+
   wp_s3_deploy -p -l "$target" "${folder}/${fname},${NPM_PACKAGE_NAME}/${fname}"
 }

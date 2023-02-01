@@ -8,8 +8,11 @@ export PATH=${PATH}:/${HOME}/.local/bin
 DOCKER=docker
 COMPOSE=docker-compose
 AWS=aws
+JQ=jq
 
 [ -z "$(which ${AWS})" ] && wp_execute pip install awscli
+[ -z "$(which ${JQ})" ] && \
+  wp_execute "curl -qL -o \"/usr/local/bin/${JQ}\" https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && chmod 755 /usr/local/bin/${JQ}"
 
 AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-"us-east-1"}
 

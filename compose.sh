@@ -8,7 +8,8 @@ wp_compse_test() {
 
 wp_compose_up() {
   wp_compse_test
-  [ $? -ne 0 ] && return $?
+  ret=$?
+  [ $ret -ne 0 ] && return $ret
 
   wp_execute ${COMPOSE} up -d $@
 
