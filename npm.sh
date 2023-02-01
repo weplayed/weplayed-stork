@@ -78,13 +78,13 @@ wp_npm_deploy() {
   eval set -- "$temp"
   unset temp
 
-  local folder=out
+  local folder=
   local target=
 
   while true; do
     case "$1" in
       '-f'|'--folder')
-        folder=${2}
+        folder="${2}/"
         shift 2
         continue
       ;;
@@ -115,9 +115,9 @@ wp_npm_deploy() {
   local fname="${NPM_PACKAGE_NAME}-${NPM_PACKAGE_VERSION}.tgz"
 
   if [ ! -f "${folder}/${fname}" ]; then
-    wp_message ERROR "The file ${folder}/${fname} does not exist"
+    wp_message ERROR "The file ${folder}${fname} does not exist"
     return 1
   fi
 
-  wp_s3_deploy -p -l "$target" "${folder}/${fname},${NPM_PACKAGE_NAME}/${fname}"
+  wp_s3_deploy -p -l "$target" "${folder}${fname},${NPM_PACKAGE_NAME}/${fname}"
 }

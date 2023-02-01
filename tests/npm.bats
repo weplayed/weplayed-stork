@@ -95,7 +95,7 @@ teardown() {
   NPM_PACKAGE_NAME=weplayed-test
   run wp_npm_deploy -t s3://test
   [ "${status}" -eq 1 ]
-  [[ "${output}" = *"out/weplayed-test-1.1.12.tgz does not exist"* ]]
+  [[ "${output}" = *" weplayed-test-1.1.12.tgz does not exist"* ]]
 }
 
 @test "wp_npm_deploy no file explicit folder" {
