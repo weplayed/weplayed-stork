@@ -1,8 +1,7 @@
-dist: jammy
+dist: focal
 
 install:
-  - sudo apt update
-  - sudo apt install -y bats
+  - npm install -g bats
 
 script:
   - bats tests
