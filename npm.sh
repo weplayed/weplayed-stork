@@ -114,7 +114,7 @@ wp_npm_deploy() {
 
   local fname="${NPM_PACKAGE_NAME}-${NPM_PACKAGE_VERSION}.tgz"
 
-  if [ ! -f "${folder}/${fname}" ]; then
+  if [ ! -f "${folder}${fname}" ]; then
     wp_message ERROR "The file ${folder}${fname} does not exist"
     return 1
   fi
