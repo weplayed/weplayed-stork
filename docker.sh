@@ -1,56 +1,22 @@
-wp_docker_login() {
-  cmd=${AWS}
-
-  if [ -n "${AWS_PROFILE}" ]
-  then
-    cmd="${cmd} --profile ${AWS_PROFILE}"
-  fi
-
-  cmd="${cmd} ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION}"
-  ret=$(wp_execute ${cmd})
-
-  if [ -z "${DEBUG}" ]
-  then
-    eval $ret
-  fi
-
-  return $?
-}
-
-wp_docker_build() {
-  local name=${DOCKER_PREFIX}
-  local registry=${DOCKER_REGISTRY}
-
-  local temp=$(getopt -o 'cr:n:t:' --long 'cache,registry:,name:,target:' -- "$@")
+wp_pack_image() {
+  local temp=$(getopt -o 'i:p:' --long 'image:,path:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  local target=
-  local cache=
+  local image=
+  local path=
 
   while true; do
     case "$1" in
-      '-c'|'--cache')
-        cache=yes
-        shift
-        continue
-      ;;
-
-      '-r'|'--registry')
-        registry=${2}
+      '-i'|'--image')
+        image="${2}"
         shift 2
         continue
       ;;
 
-      '-n'|'--name')
-        name=${2}
-        shift 2
-        continue
-      ;;
-
-      '-t'|'--target')
-        target=${2}
+      '-p'|'--path')
+        path="${2}"
         shift 2
         continue
       ;;
@@ -67,47 +33,274 @@ wp_docker_build() {
     esac
   done
 
-  if [ -z "${name}" ]
+  if [ -z "${image}" ] || [ -z "${path}" ]
   then
-    wp_message ERROR "no \$DOCKER_PREFIX neither --name passed"
+    wp_message ERROR "-i or -p or both are not provided"
     return 1
   fi
 
-  if [ -n "${cache}" ] && [ -z "${registry}" ]
+  wp_execute "${DOCKER} save "${image}" | gzip -2 > "${path}""
+}
+
+wp_unpack_image() {
+  local temp=$(getopt -o 'p:' --long 'path:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local path=
+
+  while true; do
+    case "$1" in
+      '-p'|'--path')
+        path="${2}"
+        shift 2
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  if [ -z "${path}" ]
   then
-    wp_message ERROR "--cache specified but no \$DOCKER_REGISTRY neither --registry passed"
+    wp_message ERROR "-p is not provided"
     return 1
   fi
 
-  local cmd="${DOCKER} build -t ${name}"
+  wp_execute "zcat "${path}" | ${DOCKER} load"
+}
+
+wp_store_cache() {
+  local temp=$(getopt -o 'p:' --long 'path:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local path="${HOME}/docker"
+
+  while true; do
+    case "$1" in
+      '-p'|'--path')
+        path="${2}"
+        shift 2
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  wp_execute mkdir -p "${path}"
+  wp_execute rm -rf "${path}/*"
+
+  for image in ${@}; do
+    wp_pack_image -i "${image}" -p "${path}/$(echo $image | sed -e 's|/|@|g').tar.gz";
+  done
+
+  wp_message INFO "Cache content:"
+  wp_execute ls -1 "${path}"
+}
+
+wp_restore_cache() {
+  local temp=$(getopt -o 'p:' --long 'path:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local path="${HOME}/docker"
+
+  while true; do
+    case "$1" in
+      '-p'|'--path')
+        path="${2}"
+        shift 2
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  if [ -z "${DEBUG}" ] && [  ! -d "$path" ]; then
+    wp_message INFO "Cache path does not exist or not a directory, skipping"
+    return 0
+  fi
+
+  wp_message INFO "Cache content:"
+  wp_execute ls -1 "${path}"
+
+  wp_execute "export -f wp_unpack_image wp_message wp_execute; export DOCKER; ls "${path}/*.tar.gz" | xargs -I {file} -n 1 -- /bin/bash -c 'wp_unpack_image -p {file}'"
+}
+
+wp_docker_login() {
+  local temp=$(getopt -o 'r:p:e:' --long 'region:,profile:,registry:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local region="${AWS_DEFAULT_REGION:-us-east-1}"
+  local registry=
+  local profile=
+
+  while true; do
+    case "$1" in
+      '-r'|'--region')
+        region="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-p'|'--profile')
+        profile="${2}"
+        shift 2
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  cmd=${AWS}
+
+  if [ -n "${profile}" ]
+  then
+    cmd="${cmd} --profile ${profile}"
+  fi
+
+  cmd="${cmd} ecr get-login --no-include-email --region ${region} ${@}"
+
+  ret=$(wp_execute ${cmd})
+
+  if [ -n "${DEBUG}" ]
+  then
+    echo $ret
+  else
+    eval $ret
+  fi
+
+  return $?
+}
+
+wp_docker_build() {
+  local temp=$(getopt -o 'c:i:d:x:' --long 'cache:,image:,dockerfile:,context:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local image=
+  local cache=
+  local context=.
+  local dockerfile=
+
+  while true; do
+    case "$1" in
+      '-c'|'--cache')
+        cache="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-i'|'--image')
+        image="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-d'|'--dockerfile')
+        dockerfile="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-x'|'--context')
+        context="${2}"
+        shift 2
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  if [ -z "${image}" ]
+  then
+    wp_message ERROR "no --image passed"
+    return 1
+  fi
+
+  local cmd="${DOCKER} build -t ${image}"
 
   if [ -n "${cache}" ]
   then
-    cache="${registry}/${name}:develop-latest"
-    wp_message INFO "attempt to fetch image ${cache}"
-    wp_execute "${DOCKER} pull ${cache}"
-
-    if [ "$?" -eq 0 ]
+    if ! wp_execute ${DOCKER} image inspect ${image} >/dev/null 2>&1
     then
-      wp_message INFO "build ${name} using ${cache}"
+      wp_message INFO "attempt to pull image ${image}"
+      if ! wp_execute ${DOCKER} pull ${image}
+      then
+        wp_message WARN "pulling cache image ended with error, skipping cache"
+        cache=
+      fi
+    fi
+
+    if [ -n "${cache}" ]
+    then
+      wp_message INFO "build ${image} using ${cache}"
       cmd="${cmd} --cache-from ${cache}"
-    else
-      wp_message INFO "build ${name} NOT using cache"
     fi
 
   else
     wp_message INFO "build ${name}"
   fi
 
-  if [ -n "${target}" ]
+  if [ -n "${dockerfile}" ]
   then
-    cmd="${cmd} --target ${target}"
+    cmd="${cmd} -f "${dockerfile}""
   fi
 
-  cmd="${cmd} ."
-  wp_execute ${cmd}
+  cmd="${cmd} ${@} "${context}""
 
-  if [ $? -eq 0 ]
+  if wp_execute ${cmd}
   then
     wp_message INFO "build done"
   else
@@ -118,29 +311,19 @@ wp_docker_build() {
 }
 
 wp_docker_push() {
-  local name=${DOCKER_PREFIX}
-  local registry=${DOCKER_REGISTRY}
-  local branch=${TRAVIS_BRANCH}
-
-  local temp=$(getopt -o 'fb:r:n:' --long 'force,branch:,registry:,name:' -- "$@")
+  local temp=$(getopt -o 'i:n:r:' --long 'image:,name:,registry' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  local force=
-  local target=
-  local cache=
+  local image=
+  local name=${DOCKER_PREFIX}
+  local registry=${DOCKER_REGISTRY}
 
   while true; do
     case "$1" in
-      '-f'|'--force')
-        force=yes
-        shift
-        continue
-      ;;
-
-      '-b'|'--branch')
-        branch=${2}
+      '-i'|'--image')
+        image=${2}
         shift 2
         continue
       ;;
@@ -181,39 +364,26 @@ wp_docker_push() {
     return 1
   fi
 
-  if [ -z "${branch}" ]
+  if [ -z "${image}" ]
   then
     # always use develop if target branch not in the list
-    wp_message ERROR "no \$TRAVIS_BRANCH neither --branch passed"
+    wp_message ERROR "no --image passed"
     return 1
   fi
 
-  if [ -n "${TRAVIS_PULL_REQUEST}" ] && [ "${TRAVIS_PULL_REQUEST}" != false ] && [ -z "${force}" ]
-  then
-	  wp_message WARNING "push skipped because of PR"
-	  return 0
-  fi
+  echo $@
 
-  if [[ "${TRAVIS_TAG}" != *"docker-build"* ]] && [[ " ${BRANCHES} " != *" ${branch} "* ]] && [ -z "${force}" ]
+  if [ "${#@}" -eq 0 ]
   then
-    wp_message WARNING "push skipped because of branch conditions"
+    wp_message INFO "No tags provided, skip push"
     return 0
   fi
 
-  local tags="latest travis-${TRAVIS_BUILD_NUMBER}"
-
-  if [[ " ${BRANCHES} " = *" ${branch} "*  ]]
-  then
-	  tags="${tags} ${branch}-${TRAVIS_COMMIT} ${branch}-latest"
-  fi
-
-  wp_message INFO "tags to push: (${tags})"
-
-  for tag in ${tags}
+  for tag in ${@}
   do
-    wp_message INFO "tagging ${tag}"
     remote=${registry}/${name}:${tag}
-    wp_execute ${DOCKER} tag ${name}:latest ${remote}
+    wp_message INFO "tagging ${image} with ${remote}"
+    wp_execute ${DOCKER} tag ${image} ${remote}
     wp_execute ${DOCKER} push ${remote}
   done
 
