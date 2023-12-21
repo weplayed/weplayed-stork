@@ -109,6 +109,7 @@ teardown() {
 @test "wp_npm_deploy skip no tag" {
   NPM_PACKAGE_VERSION=1.1.12
   NPM_PACKAGE_NAME=weplayed-test
+  TRAVIS_BRANCH=develop
   pushd $BATS_RUN_TMPDIR >/dev/null 2>&1
     mkdir -p build
     echo > build/weplayed-test-1.1.12.tgz

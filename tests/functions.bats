@@ -76,6 +76,7 @@ setup() {
 #wp_is_staging_build
 
 @test "wp_is_staging_build" {
+  TRAVIS_BRANCH=develop
   result=$(wp_is_staging_build)
   [ "$result" = "develop" ]
 }
@@ -175,6 +176,7 @@ setup() {
 }
 
 @test "wp_set_weplayed_env -s staging" {
+  TRAVIS_BRANCH=develop
   result=$(wp_set_weplayed_env -s staging; echo "${WEPLAYED_ENV}")
   [ "${result}" = "staging" ]
 }

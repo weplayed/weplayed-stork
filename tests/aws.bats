@@ -103,13 +103,14 @@ setup() {
 }
 
 @test "wp_ecs_deploy -s ab" {
+  TRAVIS_BRANCH=develop
   run wp_ecs_deploy -s ab
-  echo $output
   [ "${status}" -eq 0 ]
   [[ "${output}" = *"aws ecs update-service --service ab --cluster testcluster --force-new-deployment --region us-east-1"* ]]
 }
 
 @test "wp_ecs_deploy -s ab -c live" {
+  TRAVIS_BRANCH=develop
   run wp_ecs_deploy -s ab -c live
   [ "${status}" -eq 0 ]
   [[ "${output}" = *"aws ecs update-service --service ab --cluster live --force-new-deployment --region us-east-1"* ]]
@@ -121,7 +122,6 @@ setup() {
   unset TRAVIS_BRANCH
   [ "${status}" -eq 0 ]
   [[ "${output}" = *skip* ]]
-
 }
 
 @test "TRAVIS_BRANCH=develop wp_ecs_deploy -s ab -c live -b develop" {
