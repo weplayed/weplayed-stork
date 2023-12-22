@@ -273,10 +273,10 @@ wp_docker_build() {
 
   if [ -n "${cache}" ]
   then
-    if ! wp_execute ${DOCKER} image inspect ${image} >/dev/null 2>&1
+    if ! wp_execute ${DOCKER} image inspect ${cache} >/dev/null 2>&1
     then
-      wp_message INFO "attempt to pull image ${image}"
-      if ! wp_execute ${DOCKER} pull ${image}
+      wp_message INFO "attempt to pull image ${cache}"
+      if ! wp_execute ${DOCKER} pull ${cache}
       then
         wp_message WARN "pulling cache image ended with error, skipping cache"
         cache=
