@@ -4,4 +4,4 @@ install:
   - npm install bats bats-assert bats-support && rm -f package.json package-lock.json
 
 script:
-  - BATS_LIB_PATH=$(pwd)/node_modules node_modules/.bin/bats tests
+  - BATS_LIB_PATH=$(pwd)/node_modules node_modules/.bin/bats -t tests/*

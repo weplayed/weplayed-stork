@@ -2,10 +2,10 @@ bats_load_library "bats-support"
 bats_load_library "bats-assert"
 
 setup() {
+  TRAVIS=true . load.sh
+
   unset STORK_TAG
   unset STORK_BRANCH
-
-  TRAVIS=true . load.sh
 }
 
 # wp_message
