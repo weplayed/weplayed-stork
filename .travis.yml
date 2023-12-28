@@ -1,7 +1,11 @@
 dist: focal
 
+env:
+  global:
+    - BATS_LIB_PATH=/usr/local/lib/node_modules
+
 install:
-  - npm install -g bats
+  - npm install -g bats bats-assert bats-support
 
 script:
   - bats tests

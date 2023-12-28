@@ -18,7 +18,7 @@ wp_npm_prepare() {
   eval set -- "$temp"
   unset temp
 
-  local tag="${TRAVIS_TAG}"
+  local tag="${STORK_TAG}"
 
   while true; do
     case "$1" in
@@ -41,7 +41,7 @@ wp_npm_prepare() {
   done
 
   if [ -z "$tag" ]; then
-    wp_message ERROR "No -t nor --tag provided, or \$TRAVIS_TAG is not set"
+    wp_message ERROR "No -t nor --tag provided, or \$STORK_TAG is not set"
     return 1
   fi
 

@@ -29,7 +29,8 @@ wp_compose_run() {
   wp_compse_test
   [ $? -ne 0 ] && return $?
 
-  wp_execute ${COMPOSE} run --rm $@
+  echo ${@}
+  wp_execute ${COMPOSE} run --rm ${@}
 
   return $?
 }

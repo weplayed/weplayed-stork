@@ -158,25 +158,17 @@ wp_restore_cache() {
 }
 
 wp_docker_login() {
-  local temp=$(getopt -o 'r:p:e:' --long 'region:,profile:,registry:' -- "$@")
+  local temp=$(getopt -o 'r:' --long 'registry:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  local region="${AWS_DEFAULT_REGION:-us-east-1}"
-  local registry=
-  local profile=
+  local registry=${STORK_DOCKER_REGISTRY}
 
   while true; do
     case "$1" in
-      '-r'|'--region')
-        region="${2}"
-        shift 2
-        continue
-      ;;
-
-      '-p'|'--profile')
-        profile="${2}"
+      '-r'|'--registry')
+        registry="${2}"
         shift 2
         continue
       ;;
@@ -193,37 +185,27 @@ wp_docker_login() {
     esac
   done
 
-  cmd=${AWS}
-
-  if [ -n "${profile}" ]
+  if [ -z "${registry}" ]
   then
-    cmd="${cmd} --profile ${profile}"
+    wp_message ERROR "no -r/\$STORK_DOCKER_REGISTRY provided"
+    return 1
   fi
 
-  cmd="${cmd} ecr get-login --no-include-email --region ${region} ${@}"
-
-  ret=$(wp_execute ${cmd})
-
-  if [ -n "${DEBUG}" ]
-  then
-    echo $ret
-  else
-    eval $ret
-  fi
+  wp_execute "${DOCKER} login --username AWS --password-stdin $registry"
 
   return $?
 }
 
 wp_docker_build() {
-  local temp=$(getopt -o 'c:i:d:x:' --long 'cache:,image:,dockerfile:,context:' -- "$@")
+  local temp=$(getopt -o 'c:i:f:x:' --long 'cache:,image:,dockerfile:,context:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
-  local image=
-  local cache=
-  local context=.
-  local dockerfile=
+  local image="${STORK_DOCKER_IMAGE}"
+  local cache="${STORK_DOCKER_CACHE}"
+  local context="${STORK_DOCKER_CONTEXT}"
+  local dockerfile="${STORK_DOCKER_FILE}"
 
   while true; do
     case "$1" in
@@ -239,7 +221,7 @@ wp_docker_build() {
         continue
       ;;
 
-      '-d'|'--dockerfile')
+      '-f'|'--dockerfile')
         dockerfile="${2}"
         shift 2
         continue
@@ -265,7 +247,19 @@ wp_docker_build() {
 
   if [ -z "${image}" ]
   then
-    wp_message ERROR "no --image passed"
+    wp_message ERROR "no -i/\$STORK_DOCKER_IMAGE passed"
+    return 1
+  fi
+
+  if [ -z "${dockerfile}" ]
+  then
+    wp_message ERROR "no -f/\$STORK_DOCKER_FILE passed"
+    return 1
+  fi
+
+  if [ -z "${context}" ]
+  then
+    wp_message ERROR "no -x/\$STORK_DOCKER_CONTEXT passed"
     return 1
   fi
 
@@ -273,24 +267,7 @@ wp_docker_build() {
 
   if [ -n "${cache}" ]
   then
-    if ! wp_execute ${DOCKER} image inspect ${cache} >/dev/null 2>&1
-    then
-      wp_message INFO "attempt to pull image ${cache}"
-      if ! wp_execute ${DOCKER} pull ${cache}
-      then
-        wp_message WARN "pulling cache image ended with error, skipping cache"
-        cache=
-      fi
-    fi
-
-    if [ -n "${cache}" ]
-    then
-      wp_message INFO "build ${image} using ${cache}"
-      cmd="${cmd} --cache-from ${cache}"
-    fi
-
-  else
-    wp_message INFO "build ${name}"
+    cmd="${cmd} --cache-from ${cache}"
   fi
 
   if [ -n "${dockerfile}" ]
@@ -316,9 +293,9 @@ wp_docker_push() {
   eval set -- "$temp"
   unset temp
 
-  local image=
-  local name=${DOCKER_PREFIX}
-  local registry=${DOCKER_REGISTRY}
+  local image=${STORK_DOCKER_IMAGE}
+  local name=${STORK_DOCKER_PREFIX}
+  local registry=${STORK_DOCKER_REGISTRY}
 
   while true; do
     case "$1" in
@@ -354,20 +331,20 @@ wp_docker_push() {
 
   if [ -z "${registry}" ]
   then
-    wp_message ERROR "no \$DOCKER_REGISTRY neither --registry passed"
+    wp_message ERROR "no -r/\$STORK_DOCKER_REGISTRY passed"
     return 1
   fi
 
   if [ -z "${name}" ]
   then
-    wp_message ERROR "no \$DOCKER_PREFIX neither --name passed"
+    wp_message ERROR "no -n/\$STORK_DOCKER_PREFIX passed"
     return 1
   fi
 
   if [ -z "${image}" ]
   then
     # always use develop if target branch not in the list
-    wp_message ERROR "no --image passed"
+    wp_message ERROR "no -i/\$STORK_DOCKER_IMAGE passed"
     return 1
   fi
 
@@ -393,39 +370,24 @@ wp_docker_push() {
 }
 
 wp_docker_run() {
-  local name=${DOCKER_PREFIX}
-  local volume=${VOLUME_MOUNT}
-
-  local mount=
-  local vars=
-
-  local temp=$(getopt -o 'n:m:e:v:' --long 'name:mount:env:volume:' -- "$@")
+  local temp=$(getopt -o 'i:c:' --long 'image:,command:' -- "$@")
 
   eval set -- "$temp"
   unset temp
 
+  local image=${STORK_DOCKER_IMAGE}
+  local command=
+
   while true; do
     case "$1" in
-      '-n'|'--name')
-        name="${2}"
+      '-i'|'--image')
+        image="${2}"
         shift 2
         continue
       ;;
 
-      '-m'|'--mount')
-        mount="${mount} -v ${2}"
-        shift 2
-        continue
-      ;;
-
-      '-e'|'--env')
-        vars="${vars} -e ${2}"
-        shift 2
-        continue
-      ;;
-
-      '-v'|'--volume')
-        volume="${2}"
+      '-c'|'--command')
+        command="${2}"
         shift 2
         continue
       ;;
@@ -442,18 +404,90 @@ wp_docker_run() {
     esac
   done
 
-  if [ -z "${name}" ]
+  if [ -z "${image}" ]
   then
-    wp_message ERROR "no \$DOCKER_PREFIX neither --name passed"
+    wp_message ERROR "no -i/\$STORK_DOCKER_IMAGE passed"
     return 1
   fi
 
-  if [ -n "${volume}" ]
-  then
-    mount="${mount} -v $(pwd):${volume}"
-  fi
-
-  wp_execute ${DOCKER} run --rm ${mount} ${vars} -t ${name} $@
+  wp_execute ${DOCKER} run --rm ${@} ${image} ${command}
 
   return $?
+}
+
+wp_generate_docker_tags() {
+  if [ "${STORK_PULL_REQUEST}" != "false" ]
+  then
+	  wp_message WARNING "push skipped because of PR"
+	  return 0
+  fi
+
+  local temp=$(getopt -o 'lst:b:' --long 'live,staging,tag:,branch:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local tag="${STORK_TAG}"
+  local branch="${STORK_BRANCH}"
+
+  local live=
+  local staging=
+
+  while true; do
+    case "$1" in
+      '-t'|'--tag')
+        tag="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-b'|'--branch')
+        branch="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-l'|'--live')
+        live=1
+        shift
+        continue
+      ;;
+
+      '-s'|'--staging')
+        staging=1
+        shift
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  _live=$(wp_is_tag_build -t "${STORK_TAG}")
+  _staging=$(wp_is_staging_build -t "${STORK_TAG}" -b "${STORK_BRANCH}")
+
+  tags=
+
+  if [ -n "${staging}" ] && [ -n "${_staging}" ]
+  then
+    tags="${tags} develop-latest latest"
+  elif [ -n "${live}" ] && [ -n "${_live}" ]
+  then
+    tags="${tags} master-latest ${_live}"
+  fi
+
+  if [ -n "${tags}" ]
+  then
+    tags="sha-${STORK_COMMIT}${tags}"
+  fi
+
+  echo -n ${tags}
 }

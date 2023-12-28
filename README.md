@@ -38,7 +38,7 @@ Returns build tag if it matches to predefined tag format. Matching tag names exa
 
 Arguments:
 
-  * `-t|--tag`: Pass tag name, defaults to `TRAVIS_TAG` environment variable value.
+  * `-t|--tag`: Pass tag name, defaults to `STORK_TAG` environment variable value.
 
 ### wp_is_staging_build
 
@@ -46,9 +46,9 @@ Returns branch name if the build considered as staging.
 
 Arguments:
 
-  * `-t|--tag`: Pass tag name, defaults to `TRAVIS_TAG` environment variable value.
+  * `-t|--tag`: Pass tag name, defaults to `STORK_TAG` environment variable value.
 
-  * `-b|--branch`: Specify branch value, defaults to `TRAVIS_BRANCH` environment variable value.
+  * `-b|--branch`: Specify branch value, defaults to `STORK_BRANCH` environment variable value.
 
 ### wp_is_demo_build
 
@@ -57,9 +57,9 @@ Returns current branch name if it matches git flow branch names like `feature/*`
 
 Arguments:
 
-  * `-t|--tag`: Pass tag name, defaults to `TRAVIS_TAG` environment variable value.
+  * `-t|--tag`: Pass tag name, defaults to `STORK_TAG` environment variable value.
 
-  * `-b|--branch`: Specify branch value, defaults to `TRAVIS_BRANCH` environment variable value.
+  * `-b|--branch`: Specify branch value, defaults to `STORK_BRANCH` environment variable value.
 
 ### wp_set_weplayed_env
 
@@ -69,9 +69,9 @@ so all limitations explained in that functions also apply.
 
 Arguments:
 
-  * `-t|--tag`: Tag name. Defaults to `TRAVIS_TAG` env value.
+  * `-t|--tag`: Tag name. Defaults to `STORK_TAG` env value.
 
-  * `-b|--branch`: branch value, defaults to `TRAVIS_BRANCH` env value.
+  * `-b|--branch`: branch value, defaults to `STORK_BRANCH` env value.
 
   * `-l|--live`: Specify env value for tag build.
 
@@ -94,7 +94,7 @@ same value. If you need to upload some local folder into remote destination with
 suffixed, use `local_folder,` syntax. If current working dir is a source and needs to be
 uploaded into some other remote folder, use `,remote/folder` syntax.
 
-*NOTE:* upload won't happen if the `TRAVIS_EVENT_TYPE` env is equals to `pull_request`.
+*NOTE:* upload won't happen if the `STORK_EVENT_TYPE` env is equals to `pull_request`.
 
 See `wp_is_tag_build`, `wp_is_staging_build` and `wp_is_demo_build` for explanation when
 build considered as live, staging or demo.
@@ -104,9 +104,9 @@ Arguments:
   * `-p|--public`: Set `public-read` ACL during upload
 
   * `-t|--tag`: Specify tag and force tag build, in this case `-l|--live` should be present.
-    defaults to `TRAVIS_TAG` environment variable value.
+    defaults to `STORK_TAG` environment variable value.
 
-  * `-b|--branch`: Specify branch value, defaults to `TRAVIS_BRANCH` environment variable value.
+  * `-b|--branch`: Specify branch value, defaults to `STORK_BRANCH` environment variable value.
 
   * `-l|--live`: Specify AWS s3 destination for tag build.
 
@@ -136,15 +136,15 @@ Upload files from `dist` and `docs` local folders into different remote buckets:
 
 Under different combination of environment variables upload will happen to different locations:
 
-  * `TRAVIS_TAG=v1.12.1`
+  * `STORK_TAG=v1.12.1`
     * dist -> s3://live/v1
     * docs -> s3://live/v1/docs
 
-  * `TRAVIS_BRANCH=develop`
+  * `STORK_BRANCH=develop`
     * dist -> s3://staging
     * docs -> s3://staging/docs
 
-  * `TRAVIS_BRANCH=feature/stork`
+  * `STORK_BRANCH=feature/stork`
     * dist -> s3://demo/feature/stork
     * docs -> s3://demo/feature/stork/docs
 
@@ -152,12 +152,12 @@ Under different combination of environment variables upload will happen to diffe
 
 Prepares NPM deploy into s3 bucket.
 
-Please note, NPM scripts work only with live deployments, so `$TRAVIS_TAG` is necessary during
+Please note, NPM scripts work only with live deployments, so `$STORK_TAG` is necessary during
 execution.
 
 Arguments:
 
-  * `-t|--tag`: Use given tag instead of provided by `$TRAVIS_TAG`
+  * `-t|--tag`: Use given tag instead of provided by `$STORK_TAG`
 
 ### wp_npm_deploy
 
@@ -178,7 +178,7 @@ Arguments:
 Upload package from `out` folder (given `package.json` specifies `name` as `weplayed-data`
 and `version` as `1.0.1`):
 
-    wp_npm_prepare -t v1.0.1 # explicitly set, can also be inherited from $TRAVIS_TAG env variable
+    wp_npm_prepare -t v1.0.1 # explicitly set, can also be inherited from $STORK_TAG env variable
     wp_npm_deploy -f out -t s3://weplayed-npm-packages
 
 After invocation package will be available under

@@ -1,3 +1,56 @@
+wp_ecr_get_password() {
+  local temp=$(getopt -o 'r:p:' --long 'region:,profile:' -- "$@")
+
+  eval set -- "$temp"
+  unset temp
+
+  local region="${AWS_DEFAULT_REGION}"
+  local profile=
+
+  while true; do
+    case "$1" in
+      '-r'|'--region')
+        region="${2}"
+        shift 2
+        continue
+      ;;
+
+      '-p'|'--profile')
+        profile="${2}"
+        shift 2
+        continue
+      ;;
+
+      '--')
+        shift
+        break
+      ;;
+
+      *)
+        wp_message ERROR "Unknown arg ${1}"
+        return 1
+      ;;
+    esac
+  done
+
+  if [ -z "${region}" ]
+  then
+    wp_message ERROR "no -r/\$AWS_DEFAULT_REGION provided"
+    return 1
+  fi
+
+  cmd=${AWS}
+
+  if [ -n "${profile}" ]
+  then
+    cmd="${cmd} --profile ${profile}"
+  fi
+
+  wp_execute "${cmd} ecr get-login-password --region $region"
+
+  return $?
+}
+
 wp_ecs_deploy() {
   local temp=$(getopt -o 'fb:c:s:' --long 'force,branch:,cluster:,service:' -- "$@")
 
@@ -7,7 +60,7 @@ wp_ecs_deploy() {
   local cluster="testcluster"
   local service=
   local force=
-  local branch="${TRAVIS_BRANCH}"
+  local branch="${STORK_BRANCH}"
 
   while true; do
     case "$1" in
@@ -53,17 +106,17 @@ wp_ecs_deploy() {
     return 1
   fi
 
-  if [ -n "${TRAVIS_PULL_REQUEST}" ] && [ "${TRAVIS_PULL_REQUEST}" != false ] && [ -z "${force}" ]
+  if [ "${STORK_PULL_REQUEST}" != "false" ] && [ -z "${force}" ]
   then
 	  wp_message WARNING "deploy skipped because of PR"
 	  return 0
   fi
 
-  if [ -n "${branch}" ] && [ "${TRAVIS_BRANCH}" != "${branch}" ]
+  if [ -n "${branch}" ] && [ "${STORK_BRANCH}" != "${branch}" ]
   then
     wp_message INFO "skip because of branch condition"
     return 0
-  elif [[ "${TRAVIS_TAG}" != *"docker-build"* ]] && [[ " ${BRANCHES} " != *" ${branch} "* ]] && [ -z "${force}" ]
+  elif [[ " ${BRANCHES} " != *" ${branch} "* ]] && [ -z "${force}" ]
   then
     wp_message WARNING "deploy skipped because of branch conditions"
     return 0
@@ -80,7 +133,7 @@ wp_ecs_deploy() {
 }
 
 wp_s3_deploy() {
-  if [ "${TRAVIS_EVENT_TYPE}" = "pull_request" ]
+  if [ "${STORK_EVENT_TYPE}" = "pull_request" ]
   then
     wp_message INFO "skip pull request"
     return 0
@@ -91,8 +144,8 @@ wp_s3_deploy() {
   eval set -- "$temp"
   unset temp
 
-  local tag="${TRAVIS_TAG}"
-  local branch="${TRAVIS_BRANCH}"
+  local tag="${STORK_TAG}"
+  local branch="${STORK_BRANCH}"
 
   local public=
   local live=
@@ -184,7 +237,7 @@ wp_s3_deploy() {
     then
       if [ -z "${tag}" ]
       then
-        wp_message ERROR ":tag: substitution requested but no --tag neither \$TRAVIS_TAG specified"
+        wp_message ERROR ":tag: substitution requested but no --tag neither \$STORK_TAG specified"
         return 1
       fi
 
@@ -195,7 +248,7 @@ wp_s3_deploy() {
     then
       if [ -z "${tag}" ]
       then
-        wp_message ERROR ":tagmajor: substitution requested but no --tag neither \$TRAVIS_TAG specified"
+        wp_message ERROR ":tagmajor: substitution requested but no --tag neither \$STORK_TAG specified"
         return 1
       fi
 
@@ -207,7 +260,7 @@ wp_s3_deploy() {
     then
       if [ -z "${branch}" ]
       then
-        wp_message ERROR ":branch: substitution requested but no --branch neither \$TRAVIS_BRANCH specified"
+        wp_message ERROR ":branch: substitution requested but no --branch neither \$STORK_BRANCH specified"
         return 1
       fi
 

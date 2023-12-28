@@ -1,223 +1,235 @@
-#!/usr/bin/env bats
-
+bats_load_library "bats-support"
+bats_load_library "bats-assert"
 
 setup() {
-  unset TRAVIS_TAG
-  unset TRAVIS_BRANCH
-  source load.sh
+  unset STORK_TAG
+  unset STORK_BRANCH
+
+  TRAVIS=true . load.sh
 }
 
 # wp_message
 
 @test "wp_message INFO test" {
-  result=$(wp_message INFO test 2>&1 | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g")
-  [ "${result}" = "INFO: test" ]
+  run wp_message INFO test
+  assert_output --regexp "INFO:.*?test"
 }
 
 @test "wp_message WARNING test" {
-  result=$(wp_message WARNING test 2>&1 | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g")
-  [ "${result}" = "WARNING: test" ]
+  run wp_message WARNING test
+  assert_output --regexp "WARNING:.*?test"
 }
 
 @test "wp_message ERROR test" {
-  result=$(wp_message ERROR test 2>&1 | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g")
-  [ "${result}" = "ERROR: test" ]
+  run wp_message ERROR test
+  assert_output --regexp "ERROR:.*?test"
 }
 
-# wp_execute
+# # wp_execute
 
 @test "wp_execute echo test" {
-  result=$(wp_execute echo test)
-  [ "$result" = "test" ]
+  run wp_execute echo test
+  assert_output "test"
 }
 
 @test "DEBUG=1 wp_execute echo test" {
-  result=$(DEBUG=1 wp_execute echo test)
-  [ "$result" = "echo test" ]
+  DEBUG=1
+  run wp_execute echo test
+  assert_output "echo test"
 }
 
 # wp_is_tag_build
 
 @test "wp_is_tag_build" {
-  result=$(wp_is_tag_build)
-  [ -z "$result" ]
+  run wp_is_tag_build
+  assert_output ""
 }
 
 @test "wp_is_tag_build -t tag" {
-  result=$(wp_is_tag_build -t tag)
-  [ -z "$result" ]
+  run wp_is_tag_build -t tag
+  assert_output ""
 }
 
 @test "wp_is_tag_build -t v1" {
-  result=$(wp_is_tag_build -t v1)
-  [ "$result" = "v1" ]
+  run wp_is_tag_build -t v1
+  assert_output "v1"
 }
 
 @test "wp_is_tag_build -t v1.01" {
-  result=$(wp_is_tag_build -t v1.01)
-  [ "$result" = "v1.01" ]
+  run wp_is_tag_build -t v1.01
+  assert_output "v1.01"
 }
 
 @test "wp_is_tag_build -t v1.91.12" {
-  result=$(wp_is_tag_build -t v1.91.12)
-  [ "$result" = "v1.91.12" ]
+  run wp_is_tag_build -t v1.91.12
+  assert_output "v1.91.12"
 }
 
 @test "wp_is_tag_build -t v1.91.12-bats" {
-  result=$(wp_is_tag_build -t v1.91.12-bats)
-  [ "$result" = "v1.91.12-bats" ]
+  run wp_is_tag_build -t v1.91.12-bats
+  assert_output "v1.91.12-bats"
 }
 
-@test "TRAVIS_TAG=v1.91.12-bats wp_is_tag_build" {
-  result=$(TRAVIS_TAG=v1.91.12-bats wp_is_tag_build)
-  [ "$result" = "v1.91.12-bats" ]
+@test "STORK_TAG=v1.91.12-bats wp_is_tag_build" {
+  STORK_TAG=v1.91.12-bats
+  run wp_is_tag_build
+  assert_output "v1.91.12-bats"
 }
 
 #wp_is_staging_build
 
 @test "wp_is_staging_build" {
-  TRAVIS_BRANCH=develop
-  result=$(wp_is_staging_build)
-  [ "$result" = "develop" ]
+  STORK_BRANCH=develop
+  run wp_is_staging_build
+  assert_output "develop"
 }
 
 @test "wp_is_staging_build -t v1" {
-  result=$(wp_is_staging_build -t v1)
-  [ -z "$result" ]
+  run wp_is_staging_build -t v1
+  assert_output ""
 }
 
-@test "TRAVIS_TAG=v1 wp_is_staging_build" {
-  result=$(TRAVIS_TAG=v1 wp_is_staging_build)
-  [ -z "$result" ]
+@test "STORK_TAG=v1 wp_is_staging_build" {
+  STORK_TAG=v1
+  run wp_is_staging_build
+  assert_output ""
 }
 
-@test "TRAVIS_TAG=v1 wp_is_staging_build --branch develop" {
-  result=$(TRAVIS_TAG=v1 wp_is_staging_build  --branch develop)
-  [ -z "$result" ]
+@test "STORK_TAG=v1 wp_is_staging_build --branch develop" {
+  STORK_TAG=v1
+  run wp_is_staging_build  --branch develop
+  assert_output ""
 }
 
 @test "wp_is_staging_build --branch master" {
-  result=$(wp_is_staging_build  --branch master)
-  [ -z "$result" ]
+  run wp_is_staging_build  --branch master
+  assert_output ""
 }
 
 @test "wp_is_staging_build --branch develop" {
-  result=$(wp_is_staging_build -b develop)
-  [ "$result" = "develop" ]
+  run wp_is_staging_build -b develop
+  assert_output "develop"
 }
 
 # wp_is_demo_build
 
 @test "wp_is_demo_build" {
-  result=$(wp_is_demo_build)
-  [ -z "$result" ]
+  run wp_is_demo_build
+  assert_output ""
 }
 
 @test "wp_is_demo_build -t v1" {
-  result=$(wp_is_demo_build -t v1)
-  [ -z "$result" ]
+  run wp_is_demo_build -t v1
+  assert_output ""
 }
 
-@test "TRAVIS_TAG=v1 wp_is_demo_build" {
-  result=$(TRAVIS_TAG=v1 wp_is_demo_build)
-  [ -z "$result" ]
+@test "STORK_TAG=v1 wp_is_demo_build" {
+  STORK_TAG=v1
+  run wp_is_demo_build
+  assert_output ""
 }
 
 @test "wp_is_demo_build -b develop" {
-  result=$(wp_is_demo_build -b develop)
-  [ -z "$result" ]
+  run wp_is_demo_build -b develop
+  assert_output ""
 }
 
 @test "wp_is_demo_build -b master" {
-  result=$(wp_is_demo_build -b master)
-  [ -z "$result" ]
+  run wp_is_demo_build -b master
+  assert_output ""
 }
 
 @test "wp_is_demo_build -b feature" {
-  result=$(wp_is_demo_build -b feature)
-  [ -z "$result" ]
+  run wp_is_demo_build -b feature
+  assert_output ""
 }
 
 @test "wp_is_demo_build -b feature/test" {
-  result=$(wp_is_demo_build -b feature/test)
-  [ "$result" = "feature/test" ]
+  run wp_is_demo_build -b feature/test
+  assert_output "feature/test"
 }
 
 @test "wp_is_demo_build -t v1 -b feature/test" {
-  result=$(wp_is_demo_build -t v1 -b feature/test)
-  [ -z "$result" ]
+  run wp_is_demo_build -t v1 -b feature/test
+  assert_output ""
 }
 
-@test "TRAVIS_BRANCH=bugfix/test wp_is_demo_build" {
-  result=$(TRAVIS_BRANCH=bugfix/test wp_is_demo_build)
-  [ "$result" = "bugfix/test" ]
+@test "STORK_BRANCH=bugfix/test wp_is_demo_build" {
+  STORK_BRANCH=bugfix/test
+  run wp_is_demo_build
+  assert_output "bugfix/test"
 }
 
-@test "TRAVIS_BRANCH=bugfix/test wp_is_demo_build -b hotfix/test" {
-  result=$(TRAVIS_BRANCH=bugfix/test wp_is_demo_build -b hotfix/test)
-  [ "$result" = "hotfix/test" ]
+@test "STORK_BRANCH=bugfix/test wp_is_demo_build -b hotfix/test" {
+  STORK_BRANCH=bugfix/test
+  run wp_is_demo_build -b hotfix/test
+  assert_output "hotfix/test"
 }
 
 @test "wp_is_demo_build -b support/test" {
-  result=$(wp_is_demo_build -b support/test)
-  [ "$result" = "support/test" ]
+  run wp_is_demo_build -b support/test
+  assert_output "support/test"
 }
 
 # wp_set_weplayed_env
 
 @test "wp_set_weplayed_env -b ''" {
-  result=$(wp_set_weplayed_env -b ''; echo $?)
-  [ "$result" = "1" ]
+  run wp_set_weplayed_env -b ''
+  assert_failure
 }
 
 @test "wp_set_weplayed_env" {
-  result=$(wp_set_weplayed_env; echo "${WEPLAYED_ENV}")
-  [ -z "${result}" ]
+  run wp_set_weplayed_env
+  assert_failure
 }
 
 @test "wp_set_weplayed_env -s staging" {
-  TRAVIS_BRANCH=develop
-  result=$(wp_set_weplayed_env -s staging; echo "${WEPLAYED_ENV}")
-  [ "${result}" = "staging" ]
+  STORK_BRANCH=develop
+  result=$(wp_set_weplayed_env -s staging; echo $WEPLAYED_ENV)
+  assert [ "$result" == "staging" ]
 }
 
-@test "TRAVIS_TAG=test TRAVIS_BRANCH=develop wp_set_weplayed_env -l production -s staging -d demo" {
-  result=$(TRAVIS_TAG=test TRAVIS_BRANCH=develop wp_set_weplayed_env -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ -z "$result" ]
+@test "STORK_TAG=test STORK_BRANCH=develop wp_set_weplayed_env -l production -s staging -d demo" {
+  STORK_TAG=test
+  STORK_BRANCH=develop
+  result=$(wp_set_weplayed_env -l production -s staging -d demo; echo $WEPLAYED_ENV)
+  assert [ "$result" == "" ]
 }
 
-@test "TRAVIS_TAG=v12.5 TRAVIS_BRANCH=master wp_set_weplayed_env -l production -s staging -d demo" {
-  result=$(TRAVIS_TAG=v12.5 TRAVIS_BRANCH=master wp_set_weplayed_env -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ "$result" = "production" ]
+@test "STORK_TAG=v12.5 STORK_BRANCH=master wp_set_weplayed_env -l production -s staging -d demo" {
+  STORK_TAG=v12.5
+  STORK_BRANCH=master
+  result=$(wp_set_weplayed_env -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
+  assert [ "$result" == "production" ]
 }
 
 @test "wp_set_weplayed_env -t v12.5 -b master -l production -s staging -d demo" {
   result=$(wp_set_weplayed_env -t v12.5 -b master -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ "$result" = "production" ]
+  assert [ "$result" == "production" ]
 }
 
 @test "wp_set_weplayed_env -t v12.5 -b develop -l production -s staging -d demo" {
   result=$(wp_set_weplayed_env -t v12.5 -b develop -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ "$result" = "production" ]
+  assert [ "$result" == "production" ]
 }
 
 @test "wp_set_weplayed_env -b develop -l production -s staging -d demo" {
   result=$(wp_set_weplayed_env -b develop -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ "$result" = "staging" ]
+  assert [ "$result" == "staging" ]
 }
 
 @test "wp_set_weplayed_env -b feature -l production -s staging -d demo" {
   result=$(wp_set_weplayed_env -b feature -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ -z "$result" ]
+  assert [ "$result" == "" ]
 }
 
 @test "wp_set_weplayed_env -b feature/test -l production -s staging -d demo" {
   result=$(wp_set_weplayed_env -b feature/test -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ "$result" = "demo" ]
+  assert [ "$result" == "demo" ]
 }
 
 @test "wp_set_weplayed_env -b hotfix/test -l production -s staging -d demo" {
   result=$(wp_set_weplayed_env -b hotfix/test -l production -s staging -d demo; echo "${WEPLAYED_ENV}")
-  [ "$result" = "demo" ]
+  assert [ "$result" == "demo" ]
 }
 
