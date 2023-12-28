@@ -1,5 +1,5 @@
 wp_compse_test() {
-  if [ !-f "docker-compose.yaml" ] && [ !-f "docker-compose.yml" ]
+  if [ ! -f "docker-compose.yaml" ] && [ ! -f "docker-compose.yml" ]
   then
     wp_message ERROR "no docker-compose.yaml or docker-compose.yml file present"
     return 1
