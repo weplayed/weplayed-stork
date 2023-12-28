@@ -8,7 +8,6 @@ CWD=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 . ${CWD}/vars.sh
 . ${CWD}/utils.sh
 . ${CWD}/docker.sh
-. ${CWD}/compose.sh
 . ${CWD}/aws.sh
 . ${CWD}/npm.sh
 

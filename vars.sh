@@ -8,7 +8,6 @@ export PATH=${PATH}:/${HOME}/.local/bin
 DOCKER=docker
 DOCKER_BUILDKIT=1
 BUILDKIT_PROGRESS=plain
-COMPOSE=docker-compose
 AWS=aws
 JQ=jq
 
