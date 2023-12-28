@@ -1,11 +1,7 @@
 dist: focal
 
-env:
-  global:
-    - BATS_LIB_PATH=node_modules
-
 install:
-  - npm install bats bats-assert bats-support
+  - npm install bats bats-assert bats-support && rm -f package-lock.json
 
 script:
-  - bats tests
+  - BATS_LIB_PATH=$(pwd)/node_modules node_modules/.bin/bats tests
