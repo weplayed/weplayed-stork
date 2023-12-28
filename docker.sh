@@ -197,7 +197,7 @@ wp_docker_login() {
 }
 
 wp_docker_build() {
-  local temp=$(getopt -o 'c:i:f:x:' --long 'cache:,image:,dockerfile:,context:' -- "$@")
+  local temp=$(getopt -o 'c:ni:f:x:' --long 'cache:,no-cache,image:,dockerfile:,context:' -- "$@")
 
   eval set -- "$temp"
   unset temp
@@ -206,12 +206,19 @@ wp_docker_build() {
   local cache="${STORK_DOCKER_CACHE}"
   local context="${STORK_DOCKER_CONTEXT}"
   local dockerfile="${STORK_DOCKER_FILE}"
+  local nocache=
 
   while true; do
     case "$1" in
       '-c'|'--cache')
         cache="${2}"
         shift 2
+        continue
+      ;;
+
+      '-n'|'--no-cache')
+        nocache=1
+        shift
         continue
       ;;
 
@@ -265,7 +272,7 @@ wp_docker_build() {
 
   local cmd="${DOCKER} build -t ${image}"
 
-  if [ -n "${cache}" ]
+  if [ -n "${cache}" ] && [ -z "${nocache}" ]
   then
     cmd="${cmd} --cache-from ${cache}"
   fi
