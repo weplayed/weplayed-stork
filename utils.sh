@@ -157,6 +157,8 @@ wp_github_trigger_workflow() {
       --data-urlencode 'created=>${created}'
       ${path}/actions/runs")
 
+    echo RET $ret
+
     if [ $? -ne 0 ]
     then
       wp_message ERROR "Curl returned bad status"

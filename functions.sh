@@ -332,14 +332,14 @@ wp_run_command_for() {
     dest=${dest//:tag:/$tag}
     local tagmajor=$(echo ${tag} | sed -e 's|^\([^.]\{1,\}\).*$|\1|')
     dest=${dest//:tagmajor:/$tagmajor}
-    wp_execute ${dest}
+    exec ${dest}
   elif [ -n "$(wp_is_staging_build -t "${tag}" -b "${branch}")" ] && [ -n "${staging}" ]
   then
     dest=${dest//:branch:/$branch}
-    wp_execute ${dest}
+    exec ${dest}
   elif [ -n "$(wp_is_demo_build -t "${tag} -b ${branch}")" ] && [ -n "${demo}" ]
   then
-    wp_execute ${dest}
+    exec ${dest}
   else
     wp_message INFO "skipped because of tag/branch conditions"
   fi
